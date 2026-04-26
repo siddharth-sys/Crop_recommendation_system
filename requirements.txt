@@ -6,3 +6,4 @@ pandas
 streamlit
 requests
 plotly
+streamlit-geolocation
