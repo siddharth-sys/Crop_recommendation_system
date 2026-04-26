@@ -37,6 +37,15 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+section[data-testid="stSidebar"] {
+    display: block !important;
+    visibility: visible !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # -------------------- LOAD MODEL --------------------
 @st.cache_resource
 def load_model():
@@ -57,8 +66,11 @@ st.sidebar.markdown("### 📍 Location")
 
 st.sidebar.info("Click below and allow location access")
 
-location = streamlit_geolocation()
-
+with st.sidebar:
+    st.markdown("### 📍 Location")
+    st.info("Click below and allow location access")
+    location = streamlit_geolocation()
+    
 latitude = None
 longitude = None
 
