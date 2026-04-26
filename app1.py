@@ -4,21 +4,20 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import requests
+from streamlit_geolocation import streamlit_geolocation
 
 # -------------------- CONFIG --------------------
-st.set_page_config(page_title="Crop Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Smart Crop Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# -------------------- DARK MODE CSS --------------------
+# -------------------- CLEAN UI (SAFE CSS) --------------------
 st.markdown("""
 <style>
 header {visibility: hidden;}
-#MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-
-body {
-    background-color: #0e1117;
-    color: white;
-}
 
 .card {
     background-color: #1c1f26;
@@ -39,41 +38,52 @@ model = load_model()
 
 # -------------------- HEADER --------------------
 st.title("🌾 Smart Crop Recommendation Dashboard")
-st.caption("AI-powered crop suggestions with real-time weather integration")
+st.caption("AI-powered crop suggestions with auto-location & real-time weather")
+
+st.info("📍 Allow location access for automatic weather detection")
 
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🌱 Input Parameters")
 
-# -------------------- WEATHER --------------------
-city = st.sidebar.text_input("📍 Enter City", "Delhi")
+# -------------------- AUTO LOCATION --------------------
+st.sidebar.markdown("### 📍 Auto Location")
 
-# Default values
+location = streamlit_geolocation()
+
+latitude = None
+longitude = None
+
 temperature = 25.0
 humidity = 60.0
 
-# API KEY (your key)
-API_KEY = "5a83872e23f74e1181ff839dd521af55"
+if location:
+    latitude = location["latitude"]
+    longitude = location["longitude"]
+    st.sidebar.success("📍 Location detected")
 
-# Auto-fetch weather (no button needed)
-url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+# -------------------- WEATHER API --------------------
+API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔥 PUT YOUR KEY HERE
 
-try:
-    response = requests.get(url)
-    data = response.json()
+if latitude and longitude:
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
 
-    if data.get("cod") == 200:
-        temperature = data["main"]["temp"]
-        humidity = data["main"]["humidity"]
+    try:
+        response = requests.get(url)
+        data = response.json()
 
-        st.sidebar.success(f"🌡️ Temp: {temperature}°C")
-        st.sidebar.success(f"💧 Humidity: {humidity}%")
-    else:
-        st.sidebar.warning(f"Weather: {data.get('message')}")
+        if data.get("cod") == 200:
+            temperature = data["main"]["temp"]
+            humidity = data["main"]["humidity"]
 
-except:
-    st.sidebar.warning("⚠️ Weather not available")
+            st.sidebar.success(f"🌡️ Temp: {temperature}°C")
+            st.sidebar.success(f"💧 Humidity: {humidity}%")
+        else:
+            st.sidebar.warning("⚠️ Using default weather")
 
-# -------------------- INPUT SLIDERS --------------------
+    except Exception as e:
+        st.sidebar.error(f"Weather error: {e}")
+
+# -------------------- SLIDERS --------------------
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
 P = st.sidebar.slider("Phosphorus (P)", 0, 140, 50)
 K = st.sidebar.slider("Potassium (K)", 0, 200, 50)
@@ -83,6 +93,12 @@ ph = st.sidebar.slider("pH Value", 0.0, 14.0, 6.5)
 rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
 predict_btn = st.sidebar.button("🌾 Predict")
+
+# -------------------- MAP --------------------
+if latitude and longitude:
+    st.markdown("### 🗺️ Your Location")
+    map_df = pd.DataFrame({"lat": [latitude], "lon": [longitude]})
+    st.map(map_df)
 
 # -------------------- DATA --------------------
 crop_images = {
@@ -166,14 +182,7 @@ if predict_btn:
         "Average": avg_values
     })
 
-    fig = px.bar(
-        compare_df,
-        x="Feature",
-        y=["Your Input", "Average"],
-        barmode="group",
-        title="📊 Input vs Average Comparison"
-    )
-
+    fig = px.bar(compare_df, x="Feature", y=["Your Input", "Average"], barmode="group")
     st.plotly_chart(fig, use_container_width=True)
 
     # -------------------- FEATURE IMPORTANCE --------------------
@@ -186,14 +195,7 @@ if predict_btn:
             "Importance": importances
         }).sort_values(by="Importance", ascending=False)
 
-        fig2 = px.bar(
-            feature_df,
-            x="Importance",
-            y="Feature",
-            orientation="h",
-            title="📈 Feature Importance"
-        )
-
+        fig2 = px.bar(feature_df, x="Importance", y="Feature", orientation="h")
         st.plotly_chart(fig2, use_container_width=True)
 
     except:
