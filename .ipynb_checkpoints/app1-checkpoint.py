@@ -1,3 +1,12 @@
+
+
+
+
+import streamlit as st
+import numpy as np
+import pandas as pd
+import joblib
+
 st.markdown("""
     <style>
     /* Hide Streamlit header (top right icons) */
@@ -10,14 +19,6 @@ st.markdown("""
     footer {visibilitsy: hidden;}
     </style>
 """, unsafe_allow_html=True)
-
-
-
-import streamlit as st
-import numpy as np
-import pandas as pd
-import joblib
-
 # -------------------- CONFIG --------------------
 st.set_page_config(
     page_title="Crop Recommendation System",
