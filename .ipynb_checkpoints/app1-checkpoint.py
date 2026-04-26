@@ -45,12 +45,12 @@ if predict_btn:
 
     # 🌾 Local Image Paths
     crop_images = {
-        "rice": "C:/Users/Shree/project/images/rice.jfif",
-        "wheat": "C:/Users/Shree/project/images/wheat.jfif",
-        "maize": "C:/Users/Shree/project/images/maize.jfif",
-        "cotton": "C:/Users/Shree/project/images/cotton.jfif",
-        "sugarcane": "C:/Users/Shree/project/images/sugracane.jfif",
-        "papaya": "C:/Users/Shree/project/images/papaya.jfif"
+        "rice": "images/rice.jfif",
+        "wheat": "images/wheat.jfif",
+        "maize": "images/maize.jfif",
+        "cotton": "images/cotton.jfif",
+        "sugarcane": "images/sugarcane.jfif",
+        "papaya": "images/papaya.jfif"
     }
 
     # 🌾 Crop Info
