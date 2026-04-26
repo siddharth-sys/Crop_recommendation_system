@@ -3,86 +3,127 @@ import numpy as np
 import pandas as pd
 import joblib
 
-# Page config
-st.set_page_config(page_title="Crop Recommendation System", layout="centered")
+# -------------------- CONFIG --------------------
+st.set_page_config(
+    page_title="Crop Recommendation System",
+    layout="centered"
+)
 
-# Load model
-model = joblib.load("model/agroman.pkl")
+# -------------------- LOAD MODEL (CACHED) --------------------
+@st.cache_resource
+def load_model():
+    return joblib.load("model/agroman.pkl")
 
-# Title
+model = load_model()
+
+# -------------------- HEADER --------------------
 st.title("🌾 Smart Crop Recommendation System")
-st.markdown("### 🌱 Enter soil and environmental conditions")
+st.caption("AI-powered crop suggestions based on soil and environmental conditions")
 
 st.divider()
 
-# Input Layout
+# -------------------- INPUT SECTION --------------------
+st.subheader("🌱 Enter Soil & Weather Parameters")
+
 col1, col2 = st.columns(2)
 
 with col1:
-    N = st.number_input("Nitrogen (N)", 0, 140, 50)
-    P = st.number_input("Phosphorus (P)", 0, 140, 50)
-    K = st.number_input("Potassium (K)", 0, 200, 50)
-    temperature = st.number_input("Temperature (°C)", 0.0, 50.0, 25.0)
+    N = st.slider("Nitrogen (N)", 0, 140, 50)
+    P = st.slider("Phosphorus (P)", 0, 140, 50)
+    K = st.slider("Potassium (K)", 0, 200, 50)
+    temperature = st.slider("Temperature (°C)", 0.0, 50.0, 25.0)
 
 with col2:
-    humidity = st.number_input("Humidity (%)", 0.0, 100.0, 60.0)
-    ph = st.number_input("pH Value", 0.0, 14.0, 6.5)
-    rainfall = st.number_input("Rainfall (mm)", 0.0, 300.0, 100.0)
+    humidity = st.slider("Humidity (%)", 0.0, 100.0, 60.0)
+    ph = st.slider("pH Value", 0.0, 14.0, 6.5)
+    rainfall = st.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
 st.divider()
 
-# Button
-predict_btn = st.button("🌱 Predict Best Crop")
+# -------------------- BUTTONS --------------------
+col_btn1, col_btn2 = st.columns(2)
 
-# Prediction Logic
+with col_btn1:
+    predict_btn = st.button("🌱 Predict Best Crop")
+
+with col_btn2:
+    if st.button("🔄 Reset"):
+        st.rerun()
+
+# -------------------- DATA --------------------
+crop_images = {
+    "rice": "images/rice.jfif",
+    "wheat": "images/wheat.jfif",
+    "maize": "images/maize.jfif",
+    "cotton": "images/cotton.jfif",
+    "sugarcane": "images/sugarcane.jfif",
+    "papaya": "images/papaya.jfif"
+}
+
+crop_info = {
+    "rice": "🌾 Requires high rainfall and humidity.",
+    "wheat": "🌱 Grows in moderate temperature.",
+    "maize": "🌽 Needs warm climate and fertile soil.",
+    "cotton": "🧵 Requires hot climate and low humidity.",
+    "sugarcane": "🍬 Needs high water supply.",
+    "papaya": "🥭 Tropical fruit, grows in warm regions."
+}
+
+# -------------------- PREDICTION --------------------
 if predict_btn:
 
-    input_data = pd.DataFrame([[N, P, K, temperature, humidity, ph, rainfall]],
-                              columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"])
+    # Input validation
+    if ph <= 0 or ph > 14:
+        st.error("❌ pH must be between 0 and 14")
+        st.stop()
 
-    prediction = model.predict(input_data)
-    crop = prediction[0]
+    input_data = pd.DataFrame(
+        [[N, P, K, temperature, humidity, ph, rainfall]],
+        columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
+    )
 
-    # 🌾 Local Image Paths
-    crop_images = {
-        "rice": "images/rice.jfif",
-        "wheat": "images/wheat.jfif",
-        "maize": "images/maize.jfif",
-        "cotton": "images/cotton.jfif",
-        "sugarcane": "images/sugarcane.jfif",
-        "papaya": "images/papaya.jfif"
-    }
+    # Loading spinner
+    with st.spinner("🔍 Analyzing soil conditions..."):
+        prediction = model.predict(input_data)
+        crop = prediction[0]
 
-    # 🌾 Crop Info
-    crop_info = {
-        "rice": "🌾 Requires high rainfall and humidity.",
-        "wheat": "🌱 Grows in moderate temperature.",
-        "maize": "🌽 Needs warm climate and fertile soil.",
-        "cotton": "🧵 Requires hot climate and low humidity.",
-        "sugarcane": "🍬 Needs high water supply.",
-        "papaya": "🥭 Tropical fruit, grows in warm regions."
-    }
+    # -------------------- OUTPUT --------------------
+    st.markdown("## 🌾 Recommended Crop")
+    st.markdown(f"# **{crop.upper()}**")
 
-    # Output
-    st.success(f"🌾 Recommended Crop: {crop}")
-
-    # Confidence Score
+    # -------------------- CONFIDENCE --------------------
     try:
         probabilities = model.predict_proba(input_data)
         confidence = np.max(probabilities) * 100
-        st.info(f"📊 Confidence: {confidence:.2f}%")
-    except:
-        st.warning("⚠️ Confidence score not available")
 
-    # Show Image
+        st.progress(int(confidence))
+        st.caption(f"📊 Confidence: {confidence:.2f}%")
+
+    except Exception as e:
+        st.warning(f"⚠️ Confidence score not available: {e}")
+
+    # -------------------- IMAGE --------------------
     if crop.lower() in crop_images:
         try:
-            st.image(crop_images[crop.lower()], caption=crop.capitalize(), width=500)
-        except:
-            st.error("❌ Image not found. Check file path.")
+            st.image(
+                crop_images[crop.lower()],
+                caption=f"{crop.capitalize()} Crop",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"❌ Image not found: {e}")
 
-    # Show Info
+    # -------------------- INFO --------------------
+    st.markdown("### ℹ️ Crop Info")
+
     if crop.lower() in crop_info:
-        st.markdown(f"### ℹ️ Crop Info\n{crop_info[crop.lower()]}")
+        st.write(crop_info[crop.lower()])
     else:
-        st.markdown("### ℹ️ No additional info available")
+        st.write("No additional information available.")
+
+    # -------------------- EXPLANATION --------------------
+    st.markdown("### 🧠 Why this crop?")
+    st.write(
+        "This recommendation is based on matching your soil nutrients and "
+        "environmental conditions with historical agricultural data patterns."
+    )
