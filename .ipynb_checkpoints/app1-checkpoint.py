@@ -2,22 +2,29 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import joblib
+import plotly.express as px
+import requests
 
 # -------------------- CONFIG --------------------
-st.set_page_config(page_title="Crop Recommendation System", layout="wide")
+st.set_page_config(page_title="Crop Dashboard", layout="wide")
 
-# -------------------- CUSTOM CSS --------------------
+# -------------------- DARK MODE CSS --------------------
 st.markdown("""
 <style>
 header {visibility: hidden;}
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
+body {
+    background-color: #0e1117;
+    color: white;
+}
+
 .card {
-    background-color: #f0f8ff;
+    background-color: #1c1f26;
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.5);
     margin-bottom: 20px;
 }
 </style>
@@ -32,16 +39,43 @@ model = load_model()
 
 # -------------------- HEADER --------------------
 st.title("🌾 Smart Crop Recommendation Dashboard")
-st.caption("AI-powered crop suggestions based on soil and environmental conditions")
+st.caption("AI-powered crop suggestions with real-time weather integration")
 
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🌱 Input Parameters")
 
+# Weather input
+city = st.sidebar.text_input("📍 Enter City", "Delhi")
+get_weather = st.sidebar.button("🌦️ Get Weather Data")
+
+# Default values
+temperature = 25.0
+humidity = 60.0
+
+# Weather API
+if get_weather:
+    API_KEY = "637390b0f846f725606acbb0873f7ef3"  # ← PUT YOUR KEY HERE
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        temperature = data["main"]["temp"]
+        humidity = data["main"]["humidity"]
+
+        st.sidebar.success(f"🌡️ Temp: {temperature}°C")
+        st.sidebar.success(f"💧 Humidity: {humidity}%")
+
+    except:
+        st.sidebar.error("⚠️ Could not fetch weather")
+
+# Sliders
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
 P = st.sidebar.slider("Phosphorus (P)", 0, 140, 50)
 K = st.sidebar.slider("Potassium (K)", 0, 200, 50)
-temperature = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, 25.0)
-humidity = st.sidebar.slider("Humidity (%)", 0.0, 100.0, 60.0)
+temperature = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, float(temperature))
+humidity = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(humidity))
 ph = st.sidebar.slider("pH Value", 0.0, 14.0, 6.5)
 rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
@@ -86,7 +120,7 @@ if predict_btn:
     st.markdown(f"""
     <div class="card">
         <h2>🌾 Recommended Crop</h2>
-        <h1 style="color:green;">{crop.upper()}</h1>
+        <h1 style="color:#4CAF50;">{crop.upper()}</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -113,8 +147,8 @@ if predict_btn:
             st.markdown("### 📋 Input Summary")
             st.write(input_data)
 
-    except Exception as e:
-        st.warning(f"Confidence not available: {e}")
+    except:
+        st.warning("Confidence not available")
 
     # -------------------- IMAGE + INFO --------------------
     col1, col2 = st.columns(2)
@@ -127,7 +161,7 @@ if predict_btn:
         st.markdown("### ℹ️ Crop Info")
         st.write(crop_info.get(crop.lower(), "No info available"))
 
-    # -------------------- COMPARISON CHART --------------------
+    # -------------------- COMPARISON (ANIMATED) --------------------
     avg_values = [50, 50, 50, 25, 60, 6.5, 100]
 
     compare_df = pd.DataFrame({
@@ -136,8 +170,15 @@ if predict_btn:
         "Average": avg_values
     })
 
-    st.markdown("### 📊 Input vs Average")
-    st.bar_chart(compare_df.set_index("Feature"), use_container_width=True)
+    fig = px.bar(
+        compare_df,
+        x="Feature",
+        y=["Your Input", "Average"],
+        barmode="group",
+        title="📊 Input vs Average Comparison"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
     # -------------------- FEATURE IMPORTANCE --------------------
     try:
@@ -149,8 +190,15 @@ if predict_btn:
             "Importance": importances
         }).sort_values(by="Importance", ascending=False)
 
-        st.markdown("### 📈 Feature Importance")
-        st.bar_chart(feature_df.set_index("Feature"), use_container_width=True)
+        fig2 = px.bar(
+            feature_df,
+            x="Importance",
+            y="Feature",
+            orientation="h",
+            title="📈 Feature Importance"
+        )
 
-    except Exception as e:
-        st.warning(f"Feature importance not available: {e}")
+        st.plotly_chart(fig2, use_container_width=True)
+
+    except:
+        st.warning("Feature importance not available")
