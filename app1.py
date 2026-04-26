@@ -1,31 +1,29 @@
-
-
-
-
 import streamlit as st
 import numpy as np
 import pandas as pd
 import joblib
 
-st.markdown("""
-    <style>
-    /* Hide Streamlit header (top right icons) */
-    header {visibility: hidden;}
-
-    /* Optional: hide hamburger menu */
-    #MainMenu {visibility: hidden;}
-
-    /* Optional: hide footer */
-    footer {visibility: hidden;}
-    </style>
-""", unsafe_allow_html=True)
 # -------------------- CONFIG --------------------
-st.set_page_config(
-    page_title="Crop Recommendation System",
-    layout="centered"
-)
+st.set_page_config(page_title="Crop Recommendation System", layout="wide")
 
-# -------------------- LOAD MODEL (CACHED) --------------------
+# -------------------- CUSTOM CSS --------------------
+st.markdown("""
+<style>
+header {visibility: hidden;}
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+
+.card {
+    background-color: #f0f8ff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------- LOAD MODEL --------------------
 @st.cache_resource
 def load_model():
     return joblib.load("model/agroman.pkl")
@@ -33,38 +31,21 @@ def load_model():
 model = load_model()
 
 # -------------------- HEADER --------------------
-st.title("🌾 Smart Crop Recommendation System")
+st.title("🌾 Smart Crop Recommendation Dashboard")
 st.caption("AI-powered crop suggestions based on soil and environmental conditions")
 
-st.divider()
+# -------------------- SIDEBAR --------------------
+st.sidebar.title("🌱 Input Parameters")
 
-# -------------------- INPUT SECTION --------------------
-st.subheader("🌱 Enter Soil & Weather Parameters")
+N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
+P = st.sidebar.slider("Phosphorus (P)", 0, 140, 50)
+K = st.sidebar.slider("Potassium (K)", 0, 200, 50)
+temperature = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, 25.0)
+humidity = st.sidebar.slider("Humidity (%)", 0.0, 100.0, 60.0)
+ph = st.sidebar.slider("pH Value", 0.0, 14.0, 6.5)
+rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
-col1, col2 = st.columns(2)
-
-with col1:
-    N = st.slider("Nitrogen (N)", 0, 140, 50)
-    P = st.slider("Phosphorus (P)", 0, 140, 50)
-    K = st.slider("Potassium (K)", 0, 200, 50)
-    temperature = st.slider("Temperature (°C)", 0.0, 50.0, 25.0)
-
-with col2:
-    humidity = st.slider("Humidity (%)", 0.0, 100.0, 60.0)
-    ph = st.slider("pH Value", 0.0, 14.0, 6.5)
-    rainfall = st.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
-
-st.divider()
-
-# -------------------- BUTTONS --------------------
-col_btn1, col_btn2 = st.columns(2)
-
-with col_btn1:
-    predict_btn = st.button("🌱 Predict Best Crop")
-
-with col_btn2:
-    if st.button("🔄 Reset"):
-        st.rerun()
+predict_btn = st.sidebar.button("🌾 Predict")
 
 # -------------------- DATA --------------------
 crop_images = {
@@ -88,7 +69,6 @@ crop_info = {
 # -------------------- PREDICTION --------------------
 if predict_btn:
 
-    # Input validation
     if ph <= 0 or ph > 14:
         st.error("❌ pH must be between 0 and 14")
         st.stop()
@@ -98,56 +78,56 @@ if predict_btn:
         columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
     )
 
-    # -------------------- INPUT SUMMARY --------------------
-    st.markdown("### 📋 Input Summary")
-    st.write(input_data)
-
-    # Loading spinner
     with st.spinner("🔍 Analyzing soil conditions..."):
         prediction = model.predict(input_data)
         crop = prediction[0]
 
-    # -------------------- OUTPUT --------------------
-    st.markdown("## 🌾 Recommended Crop")
-    st.markdown(f"# **{crop.upper()}**")
+    # -------------------- RESULT CARD --------------------
+    st.markdown(f"""
+    <div class="card">
+        <h2>🌾 Recommended Crop</h2>
+        <h1 style="color:green;">{crop.upper()}</h1>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # -------------------- CONFIDENCE --------------------
+    # -------------------- CONFIDENCE + INPUT --------------------
     try:
         probabilities = model.predict_proba(input_data)
         confidence = np.max(probabilities) * 100
 
-        st.progress(int(confidence))
-        st.caption(f"📊 Confidence: {confidence:.2f}%")
-         # Confidence interpretation
-        if confidence > 80:
-            st.success("High confidence prediction ✅")
-        elif confidence > 60:
-            st.warning("Moderate confidence ⚠️")
-        else:
-            st.error("Low confidence ❌ Try adjusting inputs")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 📊 Confidence")
+            st.progress(int(confidence))
+            st.write(f"{confidence:.2f}%")
+
+            if confidence > 80:
+                st.success("High confidence prediction ✅")
+            elif confidence > 60:
+                st.warning("Moderate confidence ⚠️")
+            else:
+                st.error("Low confidence ❌ Try adjusting inputs")
+
+        with col2:
+            st.markdown("### 📋 Input Summary")
+            st.write(input_data)
 
     except Exception as e:
-        st.warning(f"⚠️ Confidence score not available: {e}")
+        st.warning(f"Confidence not available: {e}")
 
-    # -------------------- IMAGE --------------------
-    if crop.lower() in crop_images:
-        try:
-            st.image(
-                crop_images[crop.lower()],
-                caption=f"{crop.capitalize()} Crop",
-                use_container_width=True
-            )
-        except Exception as e:
-            st.error(f"❌ Image not found: {e}")
+    # -------------------- IMAGE + INFO --------------------
+    col1, col2 = st.columns(2)
 
-    # -------------------- INFO --------------------
-    st.markdown("### ℹ️ Crop Info")
+    with col1:
+        if crop.lower() in crop_images:
+            st.image(crop_images[crop.lower()], use_container_width=True)
 
-    if crop.lower() in crop_info:
-        st.write(crop_info[crop.lower()])
-    else:
-        st.write("No additional information available.")
-    # -------------------- INPUT VS AVERAGE --------------------
+    with col2:
+        st.markdown("### ℹ️ Crop Info")
+        st.write(crop_info.get(crop.lower(), "No info available"))
+
+    # -------------------- COMPARISON CHART --------------------
     avg_values = [50, 50, 50, 25, 60, 6.5, 100]
 
     compare_df = pd.DataFrame({
@@ -156,29 +136,21 @@ if predict_btn:
         "Average": avg_values
     })
 
-    st.markdown("### 📊 Your Input vs Average")
+    st.markdown("### 📊 Input vs Average")
     st.bar_chart(compare_df.set_index("Feature"), use_container_width=True)
 
-    # -------------------- EXPLANATION --------------------
-    st.markdown("### 🧠 Why this crop?")
     # -------------------- FEATURE IMPORTANCE --------------------
     try:
         rf_model = model.named_steps["model"]
         importances = rf_model.feature_importances_
 
-        feature_names = ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
-
         feature_df = pd.DataFrame({
-            "Feature": feature_names,
+            "Feature": ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"],
             "Importance": importances
         }).sort_values(by="Importance", ascending=False)
 
-        st.markdown("### 📊 Feature Importance")
+        st.markdown("### 📈 Feature Importance")
         st.bar_chart(feature_df.set_index("Feature"), use_container_width=True)
 
     except Exception as e:
-        st.warning(f"Could not display feature importance: {e}")
-    st.write(
-        "This recommendation is based on matching your soil nutrients and "
-        "environmental conditions with historical agricultural data patterns."
-    )
+        st.warning(f"Feature importance not available: {e}")
