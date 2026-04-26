@@ -44,34 +44,36 @@ st.caption("AI-powered crop suggestions with real-time weather integration")
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🌱 Input Parameters")
 
-# Weather input
+# -------------------- WEATHER --------------------
 city = st.sidebar.text_input("📍 Enter City", "Delhi")
-get_weather = st.sidebar.button("🌦️ Get Weather Data")
 
 # Default values
 temperature = 25.0
 humidity = 60.0
 
-# Weather API
-if get_weather:
-    API_KEY = "5a83872e23f74e1181ff839dd521af55"  # ← PUT YOUR KEY HERE
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+# API KEY (your key)
+API_KEY = "5a83872e23f74e1181ff839dd521af55"
 
-    try:
-        response = requests.get(url)
-        data = response.json()
+# Auto-fetch weather (no button needed)
+url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
 
+try:
+    response = requests.get(url)
+    data = response.json()
+
+    if data.get("cod") == 200:
         temperature = data["main"]["temp"]
         humidity = data["main"]["humidity"]
 
         st.sidebar.success(f"🌡️ Temp: {temperature}°C")
         st.sidebar.success(f"💧 Humidity: {humidity}%")
+    else:
+        st.sidebar.warning(f"Weather: {data.get('message')}")
 
-    except Exception as e:
-        st.sidebar.error(f"Error: {e}")
-        st.write(response.text)
+except:
+    st.sidebar.warning("⚠️ Weather not available")
 
-# Sliders
+# -------------------- INPUT SLIDERS --------------------
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
 P = st.sidebar.slider("Phosphorus (P)", 0, 140, 50)
 K = st.sidebar.slider("Potassium (K)", 0, 200, 50)
@@ -125,7 +127,7 @@ if predict_btn:
     </div>
     """, unsafe_allow_html=True)
 
-    # -------------------- CONFIDENCE + INPUT --------------------
+    # -------------------- CONFIDENCE --------------------
     try:
         probabilities = model.predict_proba(input_data)
         confidence = np.max(probabilities) * 100
@@ -136,13 +138,6 @@ if predict_btn:
             st.markdown("### 📊 Confidence")
             st.progress(int(confidence))
             st.write(f"{confidence:.2f}%")
-
-            if confidence > 80:
-                st.success("High confidence prediction ✅")
-            elif confidence > 60:
-                st.warning("Moderate confidence ⚠️")
-            else:
-                st.error("Low confidence ❌ Try adjusting inputs")
 
         with col2:
             st.markdown("### 📋 Input Summary")
@@ -162,7 +157,7 @@ if predict_btn:
         st.markdown("### ℹ️ Crop Info")
         st.write(crop_info.get(crop.lower(), "No info available"))
 
-    # -------------------- COMPARISON (ANIMATED) --------------------
+    # -------------------- COMPARISON --------------------
     avg_values = [50, 50, 50, 25, 60, 6.5, 100]
 
     compare_df = pd.DataFrame({
