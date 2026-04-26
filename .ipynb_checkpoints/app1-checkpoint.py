@@ -1,3 +1,18 @@
+st.markdown("""
+    <style>
+    /* Hide Streamlit header (top right icons) */
+    header {visibility: hidden;}
+
+    /* Optional: hide hamburger menu */
+    #MainMenu {visibility: hidden;}
+
+    /* Optional: hide footer */
+    footer {visibilitsy: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
+
+
 import streamlit as st
 import numpy as np
 import pandas as pd
