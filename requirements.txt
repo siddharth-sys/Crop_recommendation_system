@@ -7,3 +7,5 @@ streamlit
 requests
 plotly
 streamlit-geolocation
+folium 
+streamlit-folium 
