@@ -1,0 +1,62 @@
+# 🌾 Smart Crop Recommendation System
+
+An AI-powered web application that recommends the most suitable crop based on soil nutrients and environmental conditions.
+
+🔗 **Live Demo:**  
+https://croprecommendationsystem-23deqyrrsqjefvczv3l9pb.streamlit.app/
+
+---
+
+## 🚀 Overview
+
+This project uses Machine Learning to assist farmers and agricultural enthusiasts in selecting the best crop based on:
+
+- Soil nutrients (N, P, K)
+- Temperature
+- Humidity
+- pH level
+- Rainfall
+
+The model analyzes these inputs and provides:
+- 🌾 Recommended crop  
+- 📊 Confidence score  
+- 🖼️ Crop image  
+- ℹ️ Basic crop information  
+
+---
+
+## ✨ Features
+
+- 🔍 Real-time crop prediction
+- 📊 Confidence score visualization
+- 🎯 User-friendly UI with sliders
+- 🖼️ Dynamic crop image display
+- ℹ️ Informational crop insights
+- ⚡ Fast performance with model caching
+- 🔄 Reset functionality
+
+---
+
+## 🧠 Machine Learning Details
+
+- **Model Used:** Random Forest Classifier  
+- **Preprocessing:** StandardScaler (via Pipeline)  
+- **Hyperparameter Tuning:** GridSearchCV  
+- **Evaluation Metrics:**
+  - Accuracy Score
+  - Confusion Matrix
+  - Classification Report  
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend/UI:** Streamlit  
+- **Backend:** Python  
+- **ML Library:** Scikit-learn  
+- **Data Handling:** Pandas, NumPy  
+- **Visualization:** Matplotlib, Seaborn  
+
+---
+
+## 📂 Project Structure
