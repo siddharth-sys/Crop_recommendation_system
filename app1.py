@@ -139,6 +139,23 @@ if predict_btn:
 
     # -------------------- EXPLANATION --------------------
     st.markdown("### 🧠 Why this crop?")
+    # -------------------- FEATURE IMPORTANCE --------------------
+    try:
+        rf_model = model.named_steps["model"]
+        importances = rf_model.feature_importances_
+
+        feature_names = ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
+
+        feature_df = pd.DataFrame({
+            "Feature": feature_names,
+            "Importance": importances
+        }).sort_values(by="Importance", ascending=False)
+
+        st.markdown("### 📊 Feature Importance")
+        st.bar_chart(feature_df.set_index("Feature"), use_container_width=True)
+
+    except Exception as e:
+        st.warning(f"Could not display feature importance: {e}")
     st.write(
         "This recommendation is based on matching your soil nutrients and "
         "environmental conditions with historical agricultural data patterns."
