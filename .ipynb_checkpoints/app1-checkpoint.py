@@ -54,7 +54,7 @@ humidity = 60.0
 
 # Weather API
 if get_weather:
-    API_KEY = "637390b0f846f725606acbb0873f7ef3"  # ← PUT YOUR KEY HERE
+    API_KEY = "5a83872e23f74e1181ff839dd521af55"  # ← PUT YOUR KEY HERE
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
 
     try:
