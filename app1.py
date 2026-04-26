@@ -16,7 +16,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
 
     /* Optional: hide footer */
-    footer {visibilitsy: hidden;}
+    footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 # -------------------- CONFIG --------------------
@@ -98,6 +98,10 @@ if predict_btn:
         columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
     )
 
+    # -------------------- INPUT SUMMARY --------------------
+    st.markdown("### 📋 Input Summary")
+    st.write(input_data)
+
     # Loading spinner
     with st.spinner("🔍 Analyzing soil conditions..."):
         prediction = model.predict(input_data)
@@ -114,6 +118,13 @@ if predict_btn:
 
         st.progress(int(confidence))
         st.caption(f"📊 Confidence: {confidence:.2f}%")
+         # Confidence interpretation
+        if confidence > 80:
+            st.success("High confidence prediction ✅")
+        elif confidence > 60:
+            st.warning("Moderate confidence ⚠️")
+        else:
+            st.error("Low confidence ❌ Try adjusting inputs")
 
     except Exception as e:
         st.warning(f"⚠️ Confidence score not available: {e}")
@@ -136,6 +147,17 @@ if predict_btn:
         st.write(crop_info[crop.lower()])
     else:
         st.write("No additional information available.")
+    # -------------------- INPUT VS AVERAGE --------------------
+    avg_values = [50, 50, 50, 25, 60, 6.5, 100]
+
+    compare_df = pd.DataFrame({
+        "Feature": ["N", "P", "K", "Temp", "Humidity", "pH", "Rainfall"],
+        "Your Input": [N, P, K, temperature, humidity, ph, rainfall],
+        "Average": avg_values
+    })
+
+    st.markdown("### 📊 Your Input vs Average")
+    st.bar_chart(compare_df.set_index("Feature"), use_container_width=True)
 
     # -------------------- EXPLANATION --------------------
     st.markdown("### 🧠 Why this crop?")
