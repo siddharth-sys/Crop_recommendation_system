@@ -4,3 +4,5 @@ joblib
 scipy
 pandas
 streamlit
+requests
+plotly
