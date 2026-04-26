@@ -67,8 +67,9 @@ if get_weather:
         st.sidebar.success(f"🌡️ Temp: {temperature}°C")
         st.sidebar.success(f"💧 Humidity: {humidity}%")
 
-    except:
-        st.sidebar.error("⚠️ Could not fetch weather")
+    except Exception as e:
+        st.sidebar.error(f"Error: {e}")
+        st.write(response.text)
 
 # Sliders
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
