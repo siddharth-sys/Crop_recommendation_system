@@ -4,20 +4,28 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import requests
+from streamlit_folium import st_folium
+import folium
 from streamlit_geolocation import streamlit_geolocation
 
 # -------------------- CONFIG --------------------
 st.set_page_config(
     page_title="Smart Crop Dashboard",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded"  # ✅ FORCE SIDEBAR
 )
 
-# -------------------- CLEAN UI (SAFE CSS) --------------------
+# -------------------- DARK UI --------------------
 st.markdown("""
 <style>
 header {visibility: hidden;}
+#MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+
+body {
+    background-color: #0e1117;
+    color: white;
+}
 
 .card {
     background-color: #1c1f26;
@@ -38,34 +46,35 @@ model = load_model()
 
 # -------------------- HEADER --------------------
 st.title("🌾 Smart Crop Recommendation Dashboard")
-st.caption("AI-powered crop suggestions with auto-location & real-time weather")
-
-st.info("📍 Allow location access for automatic weather detection")
+st.caption("AI-powered crop suggestions with location & real-time weather")
 
 # -------------------- SIDEBAR --------------------
-st.sidebar.title("🌱 Input Parameters")
+st.sidebar.title("🌱 Input Panel")
+st.sidebar.write("Adjust parameters or use auto-detect")
 
-# -------------------- AUTO LOCATION --------------------
-st.sidebar.markdown("### 📍 Auto Location")
+# -------------------- GEOLOCATION --------------------
+st.sidebar.markdown("### 📍 Location")
+
+st.sidebar.info("Click below and allow location access")
 
 location = streamlit_geolocation()
 
 latitude = None
 longitude = None
 
-temperature = 25.0
-humidity = 60.0
-
-if location:
+if location is not None and "latitude" in location:
     latitude = location["latitude"]
     longitude = location["longitude"]
     st.sidebar.success("📍 Location detected")
 
-# -------------------- WEATHER API --------------------
-API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔥 PUT YOUR KEY HERE
+# -------------------- WEATHER --------------------
+temperature = 25.0
+humidity = 60.0
 
 if latitude and longitude:
-    url = f"https://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
+    API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 PUT YOUR KEY HERE
+
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
 
     try:
         response = requests.get(url)
@@ -78,12 +87,14 @@ if latitude and longitude:
             st.sidebar.success(f"🌡️ Temp: {temperature}°C")
             st.sidebar.success(f"💧 Humidity: {humidity}%")
         else:
-            st.sidebar.warning("⚠️ Using default weather")
+            st.sidebar.error(data.get("message"))
 
     except Exception as e:
-        st.sidebar.error(f"Weather error: {e}")
+        st.sidebar.error("Weather fetch failed")
 
-# -------------------- SLIDERS --------------------
+# -------------------- INPUT SLIDERS --------------------
+st.sidebar.markdown("### 🧪 Soil Parameters")
+
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
 P = st.sidebar.slider("Phosphorus (P)", 0, 140, 50)
 K = st.sidebar.slider("Potassium (K)", 0, 200, 50)
@@ -92,13 +103,18 @@ humidity = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(humidity))
 ph = st.sidebar.slider("pH Value", 0.0, 14.0, 6.5)
 rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
-predict_btn = st.sidebar.button("🌾 Predict")
+predict_btn = st.sidebar.button("🌾 Predict Crop")
 
 # -------------------- MAP --------------------
+st.markdown("### 🗺️ Your Location")
+
 if latitude and longitude:
-    st.markdown("### 🗺️ Your Location")
-    map_df = pd.DataFrame({"lat": [latitude], "lon": [longitude]})
-    st.map(map_df)
+    m = folium.Map(location=[latitude, longitude], zoom_start=10)
+    folium.Marker([latitude, longitude], tooltip="You are here").add_to(m)
+
+    st_folium(m, width=700)
+else:
+    st.info("Allow location access to see map")
 
 # -------------------- DATA --------------------
 crop_images = {
@@ -123,7 +139,7 @@ crop_info = {
 if predict_btn:
 
     if ph <= 0 or ph > 14:
-        st.error("❌ pH must be between 0 and 14")
+        st.error("❌ Invalid pH value")
         st.stop()
 
     input_data = pd.DataFrame(
@@ -131,11 +147,11 @@ if predict_btn:
         columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
     )
 
-    with st.spinner("🔍 Analyzing soil conditions..."):
+    with st.spinner("🔍 Analyzing..."):
         prediction = model.predict(input_data)
         crop = prediction[0]
 
-    # -------------------- RESULT CARD --------------------
+    # -------------------- RESULT --------------------
     st.markdown(f"""
     <div class="card">
         <h2>🌾 Recommended Crop</h2>
@@ -145,22 +161,22 @@ if predict_btn:
 
     # -------------------- CONFIDENCE --------------------
     try:
-        probabilities = model.predict_proba(input_data)
-        confidence = np.max(probabilities) * 100
+        prob = model.predict_proba(input_data)
+        confidence = np.max(prob) * 100
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("### 📊 Confidence")
+            st.subheader("📊 Confidence")
             st.progress(int(confidence))
             st.write(f"{confidence:.2f}%")
 
         with col2:
-            st.markdown("### 📋 Input Summary")
+            st.subheader("📋 Input Summary")
             st.write(input_data)
 
     except:
-        st.warning("Confidence not available")
+        st.warning("No confidence score")
 
     # -------------------- IMAGE + INFO --------------------
     col1, col2 = st.columns(2)
@@ -170,33 +186,41 @@ if predict_btn:
             st.image(crop_images[crop.lower()], use_container_width=True)
 
     with col2:
-        st.markdown("### ℹ️ Crop Info")
+        st.subheader("ℹ️ Info")
         st.write(crop_info.get(crop.lower(), "No info available"))
 
-    # -------------------- COMPARISON --------------------
+    # -------------------- CHART --------------------
     avg_values = [50, 50, 50, 25, 60, 6.5, 100]
 
-    compare_df = pd.DataFrame({
+    df_compare = pd.DataFrame({
         "Feature": ["N", "P", "K", "Temp", "Humidity", "pH", "Rainfall"],
         "Your Input": [N, P, K, temperature, humidity, ph, rainfall],
         "Average": avg_values
     })
 
-    fig = px.bar(compare_df, x="Feature", y=["Your Input", "Average"], barmode="group")
+    fig = px.bar(
+        df_compare,
+        x="Feature",
+        y=["Your Input", "Average"],
+        barmode="group",
+        title="📊 Input vs Average"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
     # -------------------- FEATURE IMPORTANCE --------------------
     try:
-        rf_model = model.named_steps["model"]
-        importances = rf_model.feature_importances_
+        rf = model.named_steps["model"]
+        importance = rf.feature_importances_
 
-        feature_df = pd.DataFrame({
+        df_feat = pd.DataFrame({
             "Feature": ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"],
-            "Importance": importances
+            "Importance": importance
         }).sort_values(by="Importance", ascending=False)
 
-        fig2 = px.bar(feature_df, x="Importance", y="Feature", orientation="h")
+        fig2 = px.bar(df_feat, x="Importance", y="Feature", orientation="h")
+
         st.plotly_chart(fig2, use_container_width=True)
 
     except:
-        st.warning("Feature importance not available")
+        st.warning("Feature importance unavailable")
