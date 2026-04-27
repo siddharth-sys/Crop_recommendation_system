@@ -1,12 +1,11 @@
-# -------------------- IMPORTS --------------------
 import streamlit as st
 import numpy as np
 import pandas as pd
 import joblib
 import plotly.express as px
 import requests
-from streamlit_folium import st_folium
 import folium
+from streamlit_folium import st_folium
 
 # -------------------- CONFIG --------------------
 st.set_page_config(
@@ -15,9 +14,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# -------------------- CLEAN UI (NO SIDEBAR BREAK) --------------------
+# -------------------- DARK UI --------------------
 st.markdown("""
 <style>
+header {visibility: hidden;}
+#MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
 body {
@@ -32,6 +33,15 @@ body {
     box-shadow: 0px 4px 12px rgba(0,0,0,0.5);
     margin-bottom: 20px;
 }
+
+/* FIX SIDEBAR VISIBILITY */
+section[data-testid="stSidebar"] {
+    background-color: #1c1f26 !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -44,22 +54,26 @@ model = load_model()
 
 # -------------------- HEADER --------------------
 st.title("🌾 Smart Crop Recommendation Dashboard")
-st.caption("AI-powered crop suggestions with real-time weather")
+st.caption("AI-powered crop suggestions with weather + soil data")
 
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🌱 Input Panel")
+st.sidebar.write("Adjust parameters below")
 
-# -------------------- LOCATION INPUT --------------------
-city = st.sidebar.text_input("📍 Enter City", "Delhi")
+# -------------------- LOCATION --------------------
+st.sidebar.markdown("### 📍 Location")
+
+latitude = st.sidebar.number_input("Latitude", value=26.9)
+longitude = st.sidebar.number_input("Longitude", value=75.8)
 
 # -------------------- WEATHER --------------------
 temperature = 25.0
 humidity = 60.0
 
-if st.sidebar.button("🌦️ Get Weather"):
-    API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 replace with your key
+API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 Replace this
 
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+if API_KEY != "5a83872e23f74e1181ff839dd521af55":
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
 
     try:
         response = requests.get(url)
@@ -72,10 +86,10 @@ if st.sidebar.button("🌦️ Get Weather"):
             st.sidebar.success(f"🌡️ Temp: {temperature}°C")
             st.sidebar.success(f"💧 Humidity: {humidity}%")
         else:
-            st.sidebar.error(data.get("message"))
+            st.sidebar.warning("Weather API issue")
 
     except:
-        st.sidebar.error("Weather fetch failed")
+        st.sidebar.warning("Weather fetch failed")
 
 # -------------------- INPUT SLIDERS --------------------
 st.sidebar.markdown("### 🧪 Soil Parameters")
@@ -83,6 +97,7 @@ st.sidebar.markdown("### 🧪 Soil Parameters")
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
 P = st.sidebar.slider("Phosphorus (P)", 0, 140, 50)
 K = st.sidebar.slider("Potassium (K)", 0, 200, 50)
+
 temperature = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, float(temperature))
 humidity = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(humidity))
 ph = st.sidebar.slider("pH Value", 0.0, 14.0, 6.5)
@@ -93,8 +108,8 @@ predict_btn = st.sidebar.button("🌾 Predict Crop")
 # -------------------- MAP --------------------
 st.markdown("### 🗺️ Location Map")
 
-m = folium.Map(location=[28.61, 77.20], zoom_start=5)  # Default India
-folium.Marker([28.61, 77.20], tooltip="Default Location").add_to(m)
+m = folium.Map(location=[latitude, longitude], zoom_start=8)
+folium.Marker([latitude, longitude], tooltip="Selected Location").add_to(m)
 
 st_folium(m, width=700)
 
@@ -114,7 +129,7 @@ crop_info = {
     "maize": "🌽 Needs warm climate and fertile soil.",
     "cotton": "🧵 Requires hot climate and low humidity.",
     "sugarcane": "🍬 Needs high water supply.",
-    "papaya": "🥭 Tropical fruit, grows in warm regions."
+    "papaya": "🥭 Tropical crop for warm regions."
 }
 
 # -------------------- PREDICTION --------------------
@@ -129,11 +144,11 @@ if predict_btn:
         columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
     )
 
-    with st.spinner("🔍 Analyzing soil conditions..."):
+    with st.spinner("🔍 Analyzing..."):
         prediction = model.predict(input_data)
         crop = prediction[0]
 
-    # -------------------- RESULT CARD --------------------
+    # RESULT
     st.markdown(f"""
     <div class="card">
         <h2>🌾 Recommended Crop</h2>
@@ -141,7 +156,7 @@ if predict_btn:
     </div>
     """, unsafe_allow_html=True)
 
-    # -------------------- CONFIDENCE --------------------
+    # CONFIDENCE
     try:
         prob = model.predict_proba(input_data)
         confidence = np.max(prob) * 100
@@ -158,9 +173,9 @@ if predict_btn:
             st.write(input_data)
 
     except:
-        st.warning("Confidence not available")
+        st.warning("No confidence score available")
 
-    # -------------------- IMAGE + INFO --------------------
+    # IMAGE + INFO
     col1, col2 = st.columns(2)
 
     with col1:
@@ -168,10 +183,10 @@ if predict_btn:
             st.image(crop_images[crop.lower()], use_container_width=True)
 
     with col2:
-        st.subheader("ℹ️ Crop Info")
+        st.subheader("ℹ️ Info")
         st.write(crop_info.get(crop.lower(), "No info available"))
 
-    # -------------------- COMPARISON CHART --------------------
+    # CHART
     avg_values = [50, 50, 50, 25, 60, 6.5, 100]
 
     df_compare = pd.DataFrame({
@@ -190,7 +205,7 @@ if predict_btn:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # -------------------- FEATURE IMPORTANCE --------------------
+    # FEATURE IMPORTANCE
     try:
         rf = model.named_steps["model"]
         importance = rf.feature_importances_
@@ -201,7 +216,6 @@ if predict_btn:
         }).sort_values(by="Importance", ascending=False)
 
         fig2 = px.bar(df_feat, x="Importance", y="Feature", orientation="h")
-
         st.plotly_chart(fig2, use_container_width=True)
 
     except:

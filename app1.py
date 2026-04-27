@@ -33,6 +33,15 @@ body {
     box-shadow: 0px 4px 12px rgba(0,0,0,0.5);
     margin-bottom: 20px;
 }
+
+/* FIX SIDEBAR VISIBILITY */
+section[data-testid="stSidebar"] {
+    background-color: #1c1f26 !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,8 +60,9 @@ st.caption("AI-powered crop suggestions with weather + soil data")
 st.sidebar.title("🌱 Input Panel")
 st.sidebar.write("Adjust parameters below")
 
-# -------------------- LOCATION (MANUAL SAFE) --------------------
-st.sidebar.markdown("### 📍 Location (Manual)")
+# -------------------- LOCATION --------------------
+st.sidebar.markdown("### 📍 Location")
+
 latitude = st.sidebar.number_input("Latitude", value=26.9)
 longitude = st.sidebar.number_input("Longitude", value=75.8)
 
@@ -60,9 +70,9 @@ longitude = st.sidebar.number_input("Longitude", value=75.8)
 temperature = 25.0
 humidity = 60.0
 
-API_KEY = "5a83872e23f74e1181ff839dd521af55"  # Replace with your key
+API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 Replace this
 
-if latitude and longitude and API_KEY != "YOUR_API_KEY":
+if API_KEY != "5a83872e23f74e1181ff839dd521af55":
     url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
 
     try:
@@ -77,6 +87,7 @@ if latitude and longitude and API_KEY != "YOUR_API_KEY":
             st.sidebar.success(f"💧 Humidity: {humidity}%")
         else:
             st.sidebar.warning("Weather API issue")
+
     except:
         st.sidebar.warning("Weather fetch failed")
 
@@ -99,6 +110,7 @@ st.markdown("### 🗺️ Location Map")
 
 m = folium.Map(location=[latitude, longitude], zoom_start=8)
 folium.Marker([latitude, longitude], tooltip="Selected Location").add_to(m)
+
 st_folium(m, width=700)
 
 # -------------------- DATA --------------------
@@ -208,5 +220,3 @@ if predict_btn:
 
     except:
         st.warning("Feature importance unavailable")
-
-st.sidebar.success("✅ Sidebar loaded successfully")
