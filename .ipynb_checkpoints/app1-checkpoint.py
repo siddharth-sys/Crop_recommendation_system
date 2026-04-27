@@ -14,33 +14,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ✅ FORCE SIDEBAR RENDER
+st.sidebar.write("👈 Sidebar loaded")
+
 # -------------------- DARK UI --------------------
 st.markdown("""
 <style>
-header {visibility: hidden;}
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
-body {
+/* App background */
+.stApp {
     background-color: #0e1117;
     color: white;
 }
 
+/* Sidebar FIX */
+section[data-testid="stSidebar"] {
+    background-color: #1c1f26 !important;
+    color: white !important;
+}
+
+/* Ensure sidebar content visible */
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+/* Card UI */
 .card {
     background-color: #1c1f26;
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0px 4px 12px rgba(0,0,0,0.5);
     margin-bottom: 20px;
-}
-
-/* FIX SIDEBAR VISIBILITY */
-section[data-testid="stSidebar"] {
-    background-color: #1c1f26 !important;
-}
-
-section[data-testid="stSidebar"] * {
-    color: white !important;
 }
 </style>
 """, unsafe_allow_html=True)
