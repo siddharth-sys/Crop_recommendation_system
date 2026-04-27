@@ -115,7 +115,25 @@ def recommend_fertilizer(crop, N, P, K):
         "maize": {"N": 70, "P": 50, "K": 50},
         "cotton": {"N": 80, "P": 40, "K": 60},
         "sugarcane": {"N": 100, "P": 50, "K": 50},
-        "papaya": {"N": 60, "P": 50, "K": 60}
+        "papaya": {"N": 60, "P": 50, "K": 60},
+
+    # ✅ ADD THESE
+        "chickpea": {"N": 20, "P": 60, "K": 40},
+        "kidneybeans": {"N": 25, "P": 60, "K": 40},
+        "pigeonpeas": {"N": 25, "P": 50, "K": 40},
+        "mothbeans": {"N": 20, "P": 50, "K": 40},
+        "mungbean": {"N": 20, "P": 50, "K": 40},
+        "blackgram": {"N": 20, "P": 50, "K": 40},
+        "lentil": {"N": 20, "P": 60, "K": 40},
+
+        "pomegranate": {"N": 50, "P": 50, "K": 50},
+        "banana": {"N": 100, "P": 50, "K": 100},
+        "mango": {"N": 70, "P": 50, "K": 50},
+        "grapes": {"N": 60, "P": 50, "K": 60},
+        "watermelon": {"N": 80, "P": 50, "K": 60},
+        "muskmelon": {"N": 80, "P": 50, "K": 60},
+        "apple": {"N": 70, "P": 50, "K": 70},
+        "orange": {"N": 70, "P": 50, "K": 60}
     }
 
     organic = {
