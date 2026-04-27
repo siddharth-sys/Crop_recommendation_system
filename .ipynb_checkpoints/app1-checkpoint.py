@@ -1,3 +1,4 @@
+# -------------------- IMPORTS --------------------
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -6,20 +7,17 @@ import plotly.express as px
 import requests
 from streamlit_folium import st_folium
 import folium
-from streamlit_geolocation import streamlit_geolocation
 
 # -------------------- CONFIG --------------------
 st.set_page_config(
     page_title="Smart Crop Dashboard",
     layout="wide",
-    initial_sidebar_state="expanded"  # ✅ FORCE SIDEBAR
+    initial_sidebar_state="expanded"
 )
 
-# -------------------- DARK UI --------------------
+# -------------------- CLEAN UI (NO SIDEBAR BREAK) --------------------
 st.markdown("""
 <style>
-header {visibility: hidden;}
-#MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
 body {
@@ -37,15 +35,6 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-section[data-testid="stSidebar"] {
-    display: block !important;
-    visibility: visible !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # -------------------- LOAD MODEL --------------------
 @st.cache_resource
 def load_model():
@@ -55,38 +44,22 @@ model = load_model()
 
 # -------------------- HEADER --------------------
 st.title("🌾 Smart Crop Recommendation Dashboard")
-st.caption("AI-powered crop suggestions with location & real-time weather")
+st.caption("AI-powered crop suggestions with real-time weather")
 
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🌱 Input Panel")
-st.sidebar.write("Adjust parameters or use auto-detect")
 
-# -------------------- GEOLOCATION --------------------
-st.sidebar.markdown("### 📍 Location")
-
-st.sidebar.info("Click below and allow location access")
-
-with st.sidebar:
-    st.markdown("### 📍 Location")
-    st.info("Click below and allow location access")
-    location = streamlit_geolocation()
-    
-latitude = None
-longitude = None
-
-if location is not None and "latitude" in location:
-    latitude = location["latitude"]
-    longitude = location["longitude"]
-    st.sidebar.success("📍 Location detected")
+# -------------------- LOCATION INPUT --------------------
+city = st.sidebar.text_input("📍 Enter City", "Delhi")
 
 # -------------------- WEATHER --------------------
 temperature = 25.0
 humidity = 60.0
 
-if latitude and longitude:
-    API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 PUT YOUR KEY HERE
+if st.sidebar.button("🌦️ Get Weather"):
+    API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 replace with your key
 
-    url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
 
     try:
         response = requests.get(url)
@@ -101,7 +74,7 @@ if latitude and longitude:
         else:
             st.sidebar.error(data.get("message"))
 
-    except Exception as e:
+    except:
         st.sidebar.error("Weather fetch failed")
 
 # -------------------- INPUT SLIDERS --------------------
@@ -118,15 +91,12 @@ rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 predict_btn = st.sidebar.button("🌾 Predict Crop")
 
 # -------------------- MAP --------------------
-st.markdown("### 🗺️ Your Location")
+st.markdown("### 🗺️ Location Map")
 
-if latitude and longitude:
-    m = folium.Map(location=[latitude, longitude], zoom_start=10)
-    folium.Marker([latitude, longitude], tooltip="You are here").add_to(m)
+m = folium.Map(location=[28.61, 77.20], zoom_start=5)  # Default India
+folium.Marker([28.61, 77.20], tooltip="Default Location").add_to(m)
 
-    st_folium(m, width=700)
-else:
-    st.info("Allow location access to see map")
+st_folium(m, width=700)
 
 # -------------------- DATA --------------------
 crop_images = {
@@ -159,11 +129,11 @@ if predict_btn:
         columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
     )
 
-    with st.spinner("🔍 Analyzing..."):
+    with st.spinner("🔍 Analyzing soil conditions..."):
         prediction = model.predict(input_data)
         crop = prediction[0]
 
-    # -------------------- RESULT --------------------
+    # -------------------- RESULT CARD --------------------
     st.markdown(f"""
     <div class="card">
         <h2>🌾 Recommended Crop</h2>
@@ -188,7 +158,7 @@ if predict_btn:
             st.write(input_data)
 
     except:
-        st.warning("No confidence score")
+        st.warning("Confidence not available")
 
     # -------------------- IMAGE + INFO --------------------
     col1, col2 = st.columns(2)
@@ -198,10 +168,10 @@ if predict_btn:
             st.image(crop_images[crop.lower()], use_container_width=True)
 
     with col2:
-        st.subheader("ℹ️ Info")
+        st.subheader("ℹ️ Crop Info")
         st.write(crop_info.get(crop.lower(), "No info available"))
 
-    # -------------------- CHART --------------------
+    # -------------------- COMPARISON CHART --------------------
     avg_values = [50, 50, 50, 25, 60, 6.5, 100]
 
     df_compare = pd.DataFrame({
