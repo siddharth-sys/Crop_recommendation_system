@@ -136,6 +136,29 @@ crop_info = {
     "papaya": "🥭 Tropical crop for warm regions."
 }
 
+def recommend_fertilizer(N, P, K):
+    recommendation = []
+
+    if N < 40:
+        recommendation.append("🌿 Add Nitrogen-rich fertilizer (e.g., Urea)")
+    elif N > 80:
+        recommendation.append("⚠️ Nitrogen is high, avoid excess fertilizers")
+
+    if P < 40:
+        recommendation.append("🌱 Add Phosphorus fertilizer (e.g., DAP)")
+    elif P > 80:
+        recommendation.append("⚠️ Phosphorus is high")
+
+    if K < 40:
+        recommendation.append("🍌 Add Potassium fertilizer (e.g., MOP)")
+    elif K > 80:
+        recommendation.append("⚠️ Potassium is high")
+
+    if not recommendation:
+        recommendation.append("✅ Soil nutrients are balanced. No extra fertilizer needed.")
+
+    return recommendation
+
 # -------------------- PREDICTION --------------------
 if predict_btn:
 
