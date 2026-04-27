@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ✅ FORCE SIDEBAR RENDER
+# FORCE SIDEBAR
 st.sidebar.write("👈 Sidebar loaded")
 
 # -------------------- DARK UI --------------------
@@ -23,24 +23,19 @@ st.markdown("""
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
-/* App background */
 .stApp {
     background-color: #0e1117;
     color: white;
 }
 
-/* Sidebar FIX */
 section[data-testid="stSidebar"] {
     background-color: #1c1f26 !important;
-    color: white !important;
 }
 
-/* Ensure sidebar content visible */
 section[data-testid="stSidebar"] * {
     color: white !important;
 }
 
-/* Card UI */
 .card {
     background-color: #1c1f26;
     padding: 20px;
@@ -68,7 +63,6 @@ st.sidebar.write("Adjust parameters below")
 
 # -------------------- LOCATION --------------------
 st.sidebar.markdown("### 📍 Location")
-
 latitude = st.sidebar.number_input("Latitude", value=26.9)
 longitude = st.sidebar.number_input("Longitude", value=75.8)
 
@@ -76,26 +70,26 @@ longitude = st.sidebar.number_input("Longitude", value=75.8)
 temperature = 25.0
 humidity = 60.0
 
-API_KEY = "5a83872e23f74e1181ff839dd521af55"  # 🔴 Replace this
+API_KEY = st.secrets["API_KEY"]
 
-if API_KEY != "5a83872e23f74e1181ff839dd521af55":
-    url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
+url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
 
-    try:
-        response = requests.get(url)
-        data = response.json()
+try:
+    response = requests.get(url)
+    data = response.json()
 
-        if data.get("cod") == 200:
-            temperature = data["main"]["temp"]
-            humidity = data["main"]["humidity"]
+    if data.get("cod") == 200:
+        temperature = data["main"]["temp"]
+        humidity = data["main"]["humidity"]
 
-            st.sidebar.success(f"🌡️ Temp: {temperature}°C")
-            st.sidebar.success(f"💧 Humidity: {humidity}%")
-        else:
-            st.sidebar.warning("Weather API issue")
+        # ✅ Improved UI
+        st.sidebar.metric("🌡️ Temperature", f"{temperature} °C")
+        st.sidebar.metric("💧 Humidity", f"{humidity} %")
+    else:
+        st.sidebar.warning("Weather API issue")
 
-    except:
-        st.sidebar.warning("Weather fetch failed")
+except:
+    st.sidebar.warning("Weather fetch failed")
 
 # -------------------- INPUT SLIDERS --------------------
 st.sidebar.markdown("### 🧪 Soil Parameters")
@@ -110,6 +104,10 @@ ph = st.sidebar.slider("pH Value", 0.0, 14.0, 6.5)
 rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
 predict_btn = st.sidebar.button("🌾 Predict Crop")
+
+# ✅ Reset Button
+if st.sidebar.button("🔄 Reset"):
+    st.rerun()
 
 # -------------------- MAP --------------------
 st.markdown("### 🗺️ Location Map")
@@ -154,6 +152,11 @@ if predict_btn:
         prediction = model.predict(input_data)
         crop = prediction[0]
 
+        # ✅ Top 3 predictions
+        probs = model.predict_proba(input_data)[0]
+        classes = model.classes_
+        top3 = sorted(zip(classes, probs), key=lambda x: x[1], reverse=True)[:3]
+
     # RESULT
     st.markdown(f"""
     <div class="card">
@@ -162,10 +165,14 @@ if predict_btn:
     </div>
     """, unsafe_allow_html=True)
 
+    # ✅ Top 3 display
+    st.subheader("🌾 Top 3 Crop Suggestions")
+    for crop_name, prob in top3:
+        st.write(f"{crop_name} → {prob*100:.2f}%")
+
     # CONFIDENCE
     try:
-        prob = model.predict_proba(input_data)
-        confidence = np.max(prob) * 100
+        confidence = np.max(probs) * 100
 
         col1, col2 = st.columns(2)
 
@@ -226,3 +233,8 @@ if predict_btn:
 
     except:
         st.warning("Feature importance unavailable")
+
+# -------------------- MODEL INFO --------------------
+st.markdown("### 🧠 Model Info")
+st.write("Algorithm: Random Forest Classifier")
+st.write("Input Features: N, P, K, Temperature, Humidity, pH, Rainfall")
