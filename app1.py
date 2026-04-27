@@ -14,7 +14,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# FORCE SIDEBAR
 st.sidebar.write("👈 Sidebar loaded")
 
 # -------------------- DARK UI --------------------
@@ -59,7 +58,6 @@ st.caption("AI-powered crop suggestions with weather + soil data")
 
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🌱 Input Panel")
-st.sidebar.write("Adjust parameters below")
 
 # -------------------- LOCATION --------------------
 st.sidebar.markdown("### 📍 Location")
@@ -72,26 +70,20 @@ humidity = 60.0
 
 API_KEY = st.secrets["API_KEY"]
 
-url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
-
 try:
-    response = requests.get(url)
-    data = response.json()
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
 
     if data.get("cod") == 200:
         temperature = data["main"]["temp"]
         humidity = data["main"]["humidity"]
 
-        # ✅ Improved UI
         st.sidebar.metric("🌡️ Temperature", f"{temperature} °C")
         st.sidebar.metric("💧 Humidity", f"{humidity} %")
-    else:
-        st.sidebar.warning("Weather API issue")
-
 except:
     st.sidebar.warning("Weather fetch failed")
 
-# -------------------- INPUT SLIDERS --------------------
+# -------------------- INPUTS --------------------
 st.sidebar.markdown("### 🧪 Soil Parameters")
 
 N = st.sidebar.slider("Nitrogen (N)", 0, 140, 50)
@@ -105,17 +97,59 @@ rainfall = st.sidebar.slider("Rainfall (mm)", 0.0, 300.0, 100.0)
 
 predict_btn = st.sidebar.button("🌾 Predict Crop")
 
-# ✅ Reset Button
 if st.sidebar.button("🔄 Reset"):
     st.rerun()
 
 # -------------------- MAP --------------------
 st.markdown("### 🗺️ Location Map")
-
 m = folium.Map(location=[latitude, longitude], zoom_start=8)
-folium.Marker([latitude, longitude], tooltip="Selected Location").add_to(m)
-
+folium.Marker([latitude, longitude]).add_to(m)
 st_folium(m, width=700)
+
+# -------------------- FERTILIZER FUNCTION --------------------
+def recommend_fertilizer(crop, N, P, K):
+
+    crop_requirements = {
+        "rice": {"N": 80, "P": 40, "K": 40},
+        "wheat": {"N": 60, "P": 40, "K": 40},
+        "maize": {"N": 70, "P": 50, "K": 50},
+        "cotton": {"N": 80, "P": 40, "K": 60},
+        "sugarcane": {"N": 100, "P": 50, "K": 50},
+        "papaya": {"N": 60, "P": 50, "K": 60}
+    }
+
+    organic = {
+        "N": "🌿 Compost / Vermicompost / Green manure",
+        "P": "🌿 Bone meal / Rock phosphate",
+        "K": "🌿 Wood ash / Banana peel compost"
+    }
+
+    chemical = {
+        "N": "⚗️ Urea",
+        "P": "⚗️ DAP",
+        "K": "⚗️ MOP"
+    }
+
+    result = []
+    crop = crop.lower()
+
+    if crop in crop_requirements:
+        req = crop_requirements[crop]
+
+        if N < req["N"]:
+            result.append(("Nitrogen", organic["N"], chemical["N"]))
+        if P < req["P"]:
+            result.append(("Phosphorus", organic["P"], chemical["P"]))
+        if K < req["K"]:
+            result.append(("Potassium", organic["K"], chemical["K"]))
+
+        if not result:
+            return ["✅ Nutrients sufficient"]
+
+    else:
+        return ["No data available"]
+
+    return result
 
 # -------------------- DATA --------------------
 crop_images = {
@@ -127,58 +161,20 @@ crop_images = {
     "papaya": "images/papaya.jfif"
 }
 
-crop_info = {
-    "rice": "🌾 Requires high rainfall and humidity.",
-    "wheat": "🌱 Grows in moderate temperature.",
-    "maize": "🌽 Needs warm climate and fertile soil.",
-    "cotton": "🧵 Requires hot climate and low humidity.",
-    "sugarcane": "🍬 Needs high water supply.",
-    "papaya": "🥭 Tropical crop for warm regions."
-}
-
-def recommend_fertilizer(N, P, K):
-    recommendation = []
-
-    if N < 40:
-        recommendation.append("🌿 Add Nitrogen-rich fertilizer (e.g., Urea)")
-    elif N > 80:
-        recommendation.append("⚠️ Nitrogen is high, avoid excess fertilizers")
-
-    if P < 40:
-        recommendation.append("🌱 Add Phosphorus fertilizer (e.g., DAP)")
-    elif P > 80:
-        recommendation.append("⚠️ Phosphorus is high")
-
-    if K < 40:
-        recommendation.append("🍌 Add Potassium fertilizer (e.g., MOP)")
-    elif K > 80:
-        recommendation.append("⚠️ Potassium is high")
-
-    if not recommendation:
-        recommendation.append("✅ Soil nutrients are balanced. No extra fertilizer needed.")
-
-    return recommendation
-
 # -------------------- PREDICTION --------------------
 if predict_btn:
 
-    if ph <= 0 or ph > 14:
-        st.error("❌ Invalid pH value")
-        st.stop()
-
     input_data = pd.DataFrame(
         [[N, P, K, temperature, humidity, ph, rainfall]],
-        columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
+        columns=["N","P","K","temperature","humidity","ph","rainfall"]
     )
 
-    with st.spinner("🔍 Analyzing..."):
-        prediction = model.predict(input_data)
-        crop = prediction[0]
+    prediction = model.predict(input_data)
+    crop = prediction[0]
 
-        # ✅ Top 3 predictions
-        probs = model.predict_proba(input_data)[0]
-        classes = model.classes_
-        top3 = sorted(zip(classes, probs), key=lambda x: x[1], reverse=True)[:3]
+    probs = model.predict_proba(input_data)[0]
+    classes = model.classes_
+    top3 = sorted(zip(classes, probs), key=lambda x: x[1], reverse=True)[:3]
 
     # RESULT
     st.markdown(f"""
@@ -188,76 +184,37 @@ if predict_btn:
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ Top 3 display
-    st.subheader("🌾 Top 3 Crop Suggestions")
-    for crop_name, prob in top3:
-        st.write(f"{crop_name} → {prob*100:.2f}%")
+    # TOP 3
+    st.subheader("🌾 Top 3 Suggestions")
+    for c, p in top3:
+        st.write(f"{c} → {p*100:.2f}%")
+
+    # FERTILIZER
+    st.subheader("🌱 Fertilizer Plan for " + crop.upper())
+
+    ferts = recommend_fertilizer(crop, N, P, K)
+
+    if isinstance(ferts[0], str):
+        st.success(ferts[0])
+    else:
+        for f in ferts:
+            st.markdown(f"### {f[0]} Deficiency")
+            st.markdown(f"**Organic:** {f[1]}")
+            st.markdown(f"**Chemical:** {f[2]}")
 
     # CONFIDENCE
-    try:
-        confidence = np.max(probs) * 100
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("📊 Confidence")
-            st.progress(int(confidence))
-            st.write(f"{confidence:.2f}%")
-
-        with col2:
-            st.subheader("📋 Input Summary")
-            st.write(input_data)
-
-    except:
-        st.warning("No confidence score available")
-
-    # IMAGE + INFO
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if crop.lower() in crop_images:
-            st.image(crop_images[crop.lower()], use_container_width=True)
-
-    with col2:
-        st.subheader("ℹ️ Info")
-        st.write(crop_info.get(crop.lower(), "No info available"))
+    st.subheader("📊 Confidence")
+    st.progress(int(np.max(probs)*100))
 
     # CHART
-    avg_values = [50, 50, 50, 25, 60, 6.5, 100]
-
-    df_compare = pd.DataFrame({
-        "Feature": ["N", "P", "K", "Temp", "Humidity", "pH", "Rainfall"],
-        "Your Input": [N, P, K, temperature, humidity, ph, rainfall],
-        "Average": avg_values
+    df = pd.DataFrame({
+        "Feature":["N","P","K","Temp","Humidity","pH","Rainfall"],
+        "Value":[N,P,K,temperature,humidity,ph,rainfall]
     })
 
-    fig = px.bar(
-        df_compare,
-        x="Feature",
-        y=["Your Input", "Average"],
-        barmode="group",
-        title="📊 Input vs Average"
-    )
-
+    fig = px.bar(df, x="Feature", y="Value")
     st.plotly_chart(fig, use_container_width=True)
-
-    # FEATURE IMPORTANCE
-    try:
-        rf = model.named_steps["model"]
-        importance = rf.feature_importances_
-
-        df_feat = pd.DataFrame({
-            "Feature": ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"],
-            "Importance": importance
-        }).sort_values(by="Importance", ascending=False)
-
-        fig2 = px.bar(df_feat, x="Importance", y="Feature", orientation="h")
-        st.plotly_chart(fig2, use_container_width=True)
-
-    except:
-        st.warning("Feature importance unavailable")
 
 # -------------------- MODEL INFO --------------------
 st.markdown("### 🧠 Model Info")
-st.write("Algorithm: Random Forest Classifier")
-st.write("Input Features: N, P, K, Temperature, Humidity, pH, Rainfall")
+st.write("Random Forest | Soil + Weather based prediction")
